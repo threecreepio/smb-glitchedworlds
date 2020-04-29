@@ -417,7 +417,7 @@ TStartGame:
     txs
     lda #>GL_ENTER
     pha
-    lda #<GL_ENTER
+    lda #<GL_ENTER-1
     pha
     jmp ConstructReturn
 
