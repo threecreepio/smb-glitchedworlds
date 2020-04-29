@@ -1,8 +1,11 @@
 .segment "INES"
 	.byte "NES",$1A
-	.byte 2 ; prg
+	.byte 4 ; prg
     .byte 1 ; chr
-	.byte %00000001 ; flags 6
+	.byte $11
+
+.segment "TITLEPRG"
+.include "title.asm"
 
 .segment "SMBPRG"
 .include "smb.asm"
