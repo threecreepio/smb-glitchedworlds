@@ -17,3 +17,20 @@ Then simply apply that IPS (using for instance Lunar IPS) to the original, unmod
 The MD5 checksum for the ROM you should be using is `811b027eaf99c2def7b933c5208636de`.
 
 Have fun!
+
+Game Genie Codes
+================
+
+Some of the glitched levels behave kind of strange, and you might need game genie codes to get a good look at them. Here are some useful ones:
+
+- `YZNLLYTX` - Disables the "TIME UP" message, so your game timer can't expire.
+
+- `AANLIAAL` - Allows control of Mario when he's stuck at the top of the level.
+
+- `AISSONOX` - Allows moving through walls
+
+- `AISSONOX` - Allows moving through walls
+
+- `EYSPAPEI` - Turn ground levels into water levels, and water levels into ground levels.
+
+- `NYNPKGYE` - Disable automatic right movement (this will break actual cutscene levels)
