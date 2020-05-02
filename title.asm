@@ -1,8 +1,9 @@
 .p02
 .org $8000
 
-
-
+ColdTitleReset:
+    jsr InitializeWRAM
+    jsr CopySettingsToMemory
 TitleReset:
     sei
     ldx #$FF
@@ -34,7 +35,6 @@ TitleReset:
     sta $8000
 
     jsr MoveHardReset
-    jsr InitializeWRAM
 
     ; setup
     ldx #$00
@@ -46,19 +46,11 @@ wait_vbl0:
 wait_vbl1:
     lda PPU_STATUS
     bpl wait_vbl1
-    ldx #0
-clear_memory:
-    lda #$00
-    sta $0000, x
-    sta $0100, x
-    sta $0300, x
-    sta $0400, x
-    sta $0500, x
-    sta $0600, x
-    sta $0700, x
-    inx
-    bne clear_memory
+    jsr CopyMemoryToSettings
+    jsr MInitializeMemory
+    jsr CopySettingsToMemory
     ldx #$00
+    stx OperMode_Task
     stx PPU_SCROLL_REG
     stx PPU_SCROLL_REG
     lda #$80
@@ -66,31 +58,27 @@ clear_memory:
 :   jmp :-
 
 
+MInitializeMemory:
+    ldx #0
+@clear:
+    lda #$00
+    sta $0000, x
+    sta $0200, x
+    sta $0300, x
+    sta $0400, x
+    sta $0500, x
+    sta $0600, x
+    sta $0700, x
+    inx
+    bne @clear
+    rts
 
 
 TitleNMI:
     ldx #$FF
     txs
-    ;bit PPU_STATUS
-    ;lda #%10010000
-    ;sta PPU_CTRL_REG1
-    ;lda #%00001110
-    ;sta PPU_CTRL_REG2
 :   jsr TitleJumpEngine
     jmp :-
-
-InitializeWRAM:
-    lda WInitialized
-    cmp #$9a
-    beq InitializeWRAM_Done
-    lda #$9a
-    sta WInitialized
-    lda #1
-    sta WPlayerSize
-InitializeWRAM_Done:
-    rts
-
-
 
 TitleJumpEngine:
     lda OperMode_Task
@@ -98,9 +86,8 @@ TitleJumpEngine:
     .word Title_Setup
     .word Title_Main
 
-
 Title_Setup:
-    bit PPU_STATUS
+    inc OperMode_Task
     lda #0
     sta PPU_SCROLL_REG
     sta PPU_SCROLL_REG
@@ -116,16 +103,14 @@ Title_Setup:
     lda PALETTE,x
     sta PPU_DATA
     inx
-    cpx #4
+    cpx #(PALETTEEND-PALETTE)
     bne @WRITE_PAL
-
 
     ldx #0
     lda #$20
     sta PPU_ADDRESS
     lda #$00
     sta PPU_ADDRESS
-    lda #$24
 @WRITE_L1:
     lda BG_L1, x
     sta PPU_DATA
@@ -147,83 +132,65 @@ Title_Setup:
     inx
     bne @WRITE_L4
 
-    ldy #30 ; Height
-@RepeatY:
-    ldx #32 ; Width
-@RepeatX:
-    clc
-    sta PPU_DATA
-    dex
-    bne @RepeatX
-    dey
-    bne @RepeatY
-    clc
-
     jsr RenderMenu
-
+    lda #%00001110
+    sta PPU_CTRL_REG2
     lda #0
     sta PPU_SCROLL_REG
     sta PPU_SCROLL_REG
 
     lda #%10010000
     sta PPU_CTRL_REG1
-    lda #%00001110
-    sta PPU_CTRL_REG2
-    inc OperMode_Task
     rts
 
-
-
-
-
-
-WInitialized = $60FE
-WSelection = $60FF
-WSelections = $6100
-WWorldNumber = $6100
-WAreaNumber = $6101
-WPlayerStatus = $6102
-WPlayerSize = $6103
 
 Title_Main:
     jsr TReadJoypads
     lda SavedJoypad2Bits
     clc
+    cmp #0
+    bne @READINPUT
+    : jmp :-
+
+@READINPUT:
     ldy WSelection
+    ldx SettablesLow,y
+    stx $3
+    ldx SettablesHi,y
+    stx $4
+    ldy #0
 
 @RIGHT:
     cmp #%00000001
     bne @LEFT
-    lda #0
-    adc WSelections,y
-    sta WSelections,y
-    jmp Rerender
 
+    lda #$0
+    adc ($3),y
+    sta ($3),y
+    jmp Rerender
 
 @LEFT:
     cmp #%00000010
     bne @DOWN
     lda #$FE
-    adc WSelections,y
-    sta WSelections,y
+    adc ($3),y
+    sta ($3),y
     jmp Rerender
-
 
 @DOWN:
     cmp #%00000100
     bne @UP
     lda #$EF
-    adc WSelections,y
-    sta WSelections,y
+    adc ($3),y
+    sta ($3),y
     jmp Rerender
-
 
 @UP:
     cmp #%00001000
     bne @SELECT
     lda #$F
-    adc WSelections,y
-    sta WSelections,y
+    adc ($3),y
+    sta ($3),y
     jmp Rerender
 
 @SELECT:
@@ -231,17 +198,23 @@ Title_Main:
     bne @START
     inc WSelection
     lda WSelection
-    cmp #4
+    cmp #(SettablesLowEnd-SettablesLow)
     bne @SELECT2
     lda #0
     sta WSelection
 @SELECT2:
     jmp Rerender
 
-
 @START:
     cmp #%00010000
     bne @DONE
+    ldx SavedJoypadBits
+    cpx #%10000000
+    lda #0
+    bcc @START2
+    lda #1
+@START2:
+    sta PrimaryHardMode
     jmp TStartGame
 @DONE:
     : jmp :-
@@ -253,74 +226,157 @@ Rerender:
     sta PPU_SCROLL_REG
     : jmp :-
 
-
 RenderMenu:
-    ldx WSelection
     lda #$20
+    sta $1
+    lda #$92
+    sta $2
+
+    lda #0
+    sta $0
+@RenderMenu:
+    ldy $0
+
+    clc
+    lda $2
+    adc #$40
+    sta $2
+    bcc @NoOverflow
+    inc $1
+@NoOverflow:
+    lda $1
     sta PPU_ADDRESS
-    lda #$D2
+    lda $2
     sta PPU_ADDRESS
-    lda WWorldNumber
+
+    ldy $0
+    ldx SettablesLow,y
+    stx $3
+    ldx SettablesHi,y
+    stx $4
+    ldy #0
+
+    lda ($3),y
+    clc
     jsr print_hexbyte
+
     lda #$24
-    sta PPU_DATA
-    lda #$24
-    cpx #0
-    bne R1
-    adc #3
-    R1:
-    sta PPU_DATA
-    
-    lda #$21
-    sta PPU_ADDRESS
-    lda #$12
-    sta PPU_ADDRESS
-    lda WAreaNumber
-    jsr print_hexbyte
-    lda #$24
-    sta PPU_DATA
-    lda #$24
-    cpx #1
-    bne R2
-    adc #3
-    R2:
-    sta PPU_DATA
-    
-    lda #$21
-    sta PPU_ADDRESS
-    lda #$52
-    sta PPU_ADDRESS
-    lda WPlayerStatus
-    jsr print_hexbyte
-    lda #$24
-    sta PPU_DATA
-    lda #$24
-    cpx #2
-    bne R3
-    adc #3
-    R3:
     sta PPU_DATA
 
-    lda #$21
-    sta PPU_ADDRESS
-    lda #$92
-    sta PPU_ADDRESS
-    lda WPlayerSize
-    jsr print_hexbyte
-    lda #$24
-    sta PPU_DATA
-    lda #$24
-    cpx #3
-    bne R4
+    ldy $0
+    cpy WSelection
+    bne @RenderSelectionTick
     adc #3
-    R4:
+@RenderSelectionTick:
     sta PPU_DATA
+    inc $0
+    lda $0
+    cmp #(SettablesLowEnd-SettablesLow)
+    bne @RenderMenu
     rts
 
 
+InitializeWRAM:
+    lda WInitialized
+    cmp #$59
+    beq @InitializeWRAM_Done
+    lda #$59
+    sta WInitialized
+    lda #1
+    sta SettingsFileStart + (SettablesLowPlayerSize - SettablesLow) + 1
+@InitializeWRAM_Done:
+    rts
+
+WSelection = $60F0
+WInitialized = (SettingsFileStart - 1)
+SettingsFileStart = $60FF
+
+CopySettingsToMemory:
+    ldy #0
+    ldx #(SettablesLowEnd-SettablesLow)
+@CopySetting:
+    lda SettablesLow-1,x
+    sta $0
+    lda SettablesHi-1,x
+    sta $1
+    lda SettingsFileStart,x
+    sta ($0),y
+    dex
+    bne @CopySetting
+    rts
+
+CopyMemoryToSettings:
+    ldy #0
+    ldx #(SettablesLowEnd-SettablesLow)
+@CopySetting:
+    lda SettablesLow-1,x
+    sta $0
+    lda SettablesHi-1,x
+    sta $1
+    lda ($0),y
+    sta SettingsFileStart,x
+    dex
+    bne @CopySetting
+    rts
+
+SettablesLow:
+    .byte <WorldNumber
+    .byte <AreaNumber
+    .byte <PlayerStatus
+SettablesLowPlayerSize:
+    .byte <PlayerSize
+SettablesLowEnd:
+
+SettablesHi:
+    .byte >WorldNumber
+    .byte >AreaNumber
+    .byte >PlayerStatus
+    .byte >PlayerSize
 
 
+TStartGame:
+    lda #%10000000
+    sta PPU_CTRL_REG1
+    lda #%00011110
+    sta PPU_CTRL_REG2
 
+    lda #$00
+    sta $4015
+    lda #Silence             ;silence music
+    sta EventMusicQueue
+
+    lda AreaNumber
+    sta LevelNumber
+
+    lda #$7F
+    sta NumberofLives
+
+    ; set the startup mode to enter the game immediately
+    lda #1
+    sta OperMode
+    lda #0
+    sta OperMode_Task
+    lda #0
+    sta GameEngineSubroutine
+
+    lda #4
+    sta GameTimerDisplay
+
+    lda #$00                  ;game timer from header
+    sta TimerControl          ;also set flag for timers to count again
+
+    ; jump to a spot in the startup code where the game won't clear out memory
+    ldx #$FF
+    txs
+    lda #>(GL_ENTER - 1)
+    pha
+    lda #<(GL_ENTER - 1)
+    pha
+    lda #>(LoadAreaPointer - 1)
+    pha
+    lda #<(LoadAreaPointer - 1)
+    pha
+    jmp TitleBankSwitch
 
 
 print_hexchar:
@@ -340,6 +396,7 @@ print_hexbyte:
     and #$0F
     jsr print_hexchar
     rts
+
 
 TReadJoypads:
         lda #0
@@ -367,7 +424,6 @@ TPortLoop2:
         sta SavedJoypadBits
         rts
 
-
 JumpEngineCore:
        asl          ;shift bit from contents of A
        tay
@@ -383,43 +439,6 @@ JumpEngineCore:
        sta $07
        jmp ($06)    ;jump to the address we loaded
 
-
-TStartGame:
-    lda #%10000000
-    sta PPU_CTRL_REG1
-    lda #%00011110
-    sta PPU_CTRL_REG2
-
-    clc
-    lda WPlayerSize
-    sta PlayerSize
-    lda WPlayerStatus
-    sta PlayerStatus
-    lda WWorldNumber
-    sta WorldNumber
-    lda WAreaNumber
-    sta AreaNumber
-    sta LevelNumber
-
-    ; set the startup mode to enter the game immediately
-    lda #0
-    sta OperMode
-    lda #1
-    sta OperMode_Task
-    lda #0
-    sta ScreenRoutineTask
-    lda #6
-    sta GameEngineSubroutine
-
-    ; jump to a spot in the startup code where the game won't clear out memory
-    clc
-    ldx #$FF
-    txs
-    lda #>GL_ENTER
-    pha
-    lda #<GL_ENTER-1
-    pha
-    jmp ConstructReturn
 
 InGameCodeLocation = $6200
 MoveHardReset:
@@ -446,7 +465,7 @@ HardReset_Start:
 
 ;; This will line up properly with an RTS in the SMB rom.
 .res $F908 - * - $15, $00
-ConstructReturn:
+TitleBankSwitch:
     lda #2
     sta $E000
     lsr
@@ -464,5 +483,5 @@ ConstructReturn:
 
 .res $FFFA - *, $FF
 .word TitleNMI
-.word TitleReset
-.word TitleReset
+.word ColdTitleReset
+.word ColdTitleReset

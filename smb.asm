@@ -672,8 +672,7 @@ Start:
              sei                          ;pretty standard 6502 type init here
              cld
              lda #%00010000               ;init PPU control register 1 
-             jmp $6200
-             ;sta PPU_CTRL_REG1
+             sta PPU_CTRL_REG1
              ldx #$ff                     ;reset stack pointer
              txs
 VBlank1:     lda PPU_STATUS               ;wait two frames
@@ -691,7 +690,7 @@ WBootCheck:  lda TopScoreDisplay,x        ;check each score digit in the top sco
              cmp #$a5                     ;another location has a specific value
              bne ColdBoot   
              ldy #WarmBootOffset          ;if passed both, load warm boot pointer
-ColdBoot:    jsr InitializeMemory         ;clear memory using pointer in Y
+ColdBoot:    jsr $6200         ;clear memory using pointer in Y
              sta SND_DELTA_REG+1          ;reset delta counter load register
              sta OperMode                 ;reset primary mode of operation
 GL_ENTER:
@@ -2716,7 +2715,7 @@ DoneInitArea:  lda #Silence             ;silence music
 PrimaryGameSetup:
       lda #$01
       sta FetchNewGameTimerFlag   ;set flag to load game timer from header
-      sta PlayerSize-2            ;set player's size to small
+      sta PlayerSize              ;set player's size to small
       lda #$02
       sta NumberofLives           ;give each player three lives
       sta OffScr_NumberofLives
@@ -2989,11 +2988,11 @@ TerminateGame:
 ContinueGame:
            jsr LoadAreaPointer       ;update level pointer with
            lda #$01                  ;actual world and area numbers, then
-           sta PlayerSize-2            ;reset player's size, status, and
+           sta PlayerSize            ;reset player's size, status, and
            inc FetchNewGameTimerFlag ;set game timer flag to reload
            lda #$00                  ;game timer from header
            sta TimerControl          ;also set flag for timers to count again
-           sta PlayerStatus-4
+           sta PlayerStatus
            sta GameEngineSubroutine  ;reset task for game core
            sta OperMode_Task         ;set modes and leave
            lda #$01                  ;if in game over mode, switch back to
