@@ -278,10 +278,16 @@ RenderMenu:
 
 InitializeWRAM:
     lda WInitialized
-    cmp #$59
+    cmp #$69
     beq @InitializeWRAM_Done
-    lda #$59
+    lda #$69
     sta WInitialized
+    lda #0
+    ldy #(SettablesLowEnd-SettablesLow)
+@CopyData:
+    sta SettingsFileStart-1,y
+    dey
+bne @CopyData
     lda #1
     sta SettingsFileStart + (SettablesLowPlayerSize - SettablesLow) + 1
 @InitializeWRAM_Done:
