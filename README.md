@@ -16,7 +16,7 @@ A couple of things to be aware of:
 Download & Installation
 =======================
 
-First, download the latest patch from the [releases](https://github.com/threecreepio/smb2j-glitchedworlds/releases)
+First, download the latest patch from the [releases](https://github.com/threecreepio/smb-glitchedworlds/releases)
 
 Then simply apply that IPS (using for instance Lunar IPS) to the original, unmodified version of the Super Mario Bros. (US/World) ROM. 
 
