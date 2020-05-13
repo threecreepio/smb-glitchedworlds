@@ -283,6 +283,7 @@ InitializeWRAM:
     lda #$69
     sta WInitialized
     lda #0
+    sta WSelection
     ldy #(SettablesLowEnd-SettablesLow)
 @CopyData:
     sta SettingsFileStart-1,y
