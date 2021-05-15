@@ -18,7 +18,7 @@ Download & Installation
 
 First, download the latest patch from the [releases](https://github.com/threecreepio/smb-glitchedworlds/releases)
 
-Then simply apply that IPS (using for instance Lunar IPS) to the original, unmodified version of the Super Mario Bros. (US/World) ROM. 
+Then apply that IPS (using for instance Lunar IPS or http://rainwarrior.ca/projects/nes/ips.html) to the original, unmodified version of the Super Mario Bros. (US/World) ROM. 
 
 The MD5 checksum for the ROM you should be using is `811b027eaf99c2def7b933c5208636de`.
 
