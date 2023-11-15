@@ -7,6 +7,7 @@ Usage:
  - Press select to switch between lines
  - Press Left or Right to change values by 1, Up or Down to change by 16
  - Press Start to start the game!
+ - Press A+Start to play in hard more, B+Start to play with two players.
 
 A couple of things to be aware of:
  - The selectors are 0-based, so if you pick world 0, area 0, you will get what's normally 1-1 (the title screen will show 1-1.) This was done to make it easier to remember level numbers rather than having to remember that you were on "right side of a cloud - copyright sign"

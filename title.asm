@@ -206,15 +206,20 @@ Title_Main:
     jmp Rerender
 
 @START:
-    cmp #%00010000
-    bne @DONE
-    ldx SavedJoypadBits
-    cpx #%10000000
-    lda #0
-    bcc @START2
-    lda #1
-@START2:
-    sta PrimaryHardMode
+    and #%00010000
+    beq @DONE
+    ldx #0
+    lda SavedJoypadBits
+    and #%10000000
+    beq :+
+    inx
+:   stx PrimaryHardMode
+    ldx #0
+    lda SavedJoypadBits
+    and #%01000000
+    beq :+
+    inx
+:   stx NumberOfPlayers
     jmp TStartGame
 @DONE:
     : jmp :-
@@ -357,6 +362,7 @@ TStartGame:
 
     lda #$7F
     sta NumberofLives
+    sta OffScr_NumberofLives
 
     ; set the startup mode to enter the game immediately
     lda #1
